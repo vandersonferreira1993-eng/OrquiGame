@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full select-none bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <!-- Meta tags para rodar em Tela Cheia no Celular (WebApp) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#020617">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OrquiGame - O Jogo Interativo das Orquídeas</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="manifest" href="manifest.json">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        orchid: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            200: '#fbcfe8',
+                            300: '#f472b6',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                            950: '#4a044e',
+                        },
+                        botanic: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                            950: '#052e16',
+                        },
+                        gold: {
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Bloqueio de seleção de texto e suporte a toque */
+        html, body {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020617;
+        }
+
+        /* Efeito tátil de clique nos botões */
+        .touch-active:active {
+            transform: scale(0.95);
+            transition: transform 0.08s ease;
+        }
+
+        /* Oculta barras de rolagem nativas */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Animações e Rotações 3D dos Flashcards */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Destaques das partes florais em SVG */
+        .flower-part {
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+        .flower-part:hover, .flower-part.selected {
+            filter: drop-shadow(0 0 12px rgba(217, 70, 239, 0.9));
+            stroke-width: 3px;
+        }
+
+        /* Moldura simuladora de smartphone em telas grandes */
+        @media (min-width: 640px) {
+            .app-container {
+                max-width: 430px;
+                height: 92vh;
+                max-height: 880px;
+                border-radius: 40px;
+                border: 8px solid #1e293b;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(217, 70, 239, 0.15);
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-slate-950 text-slate-100 font-sans p-0 sm:p-4">
+
+    <!-- CONTAINER PRINCIPAL (SIMULADOR RETRATO DE WEBAPP) -->
+    <div class="app-container w-full h-full bg-slate-900 flex flex-col relative overflow-hidden shadow-2xl">
+   <!-- CABEÇALHO DO APLICATIVO (VISÍVEL EM TODAS AS ABAS) -->
+        <header id="app-header" class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 z-30 relative">
+            
+            <!-- Esquerda: Logo + Título -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 bg-gradient-to-tr from-orchid-600 via-orchid-500 to-botanic-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-orchid-600/30">
+                    <i data-lucide="flower-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-base bg-gradient-to-r from-orchid-200 via-pink-200 to-gold-400 bg-clip-text text-transparent leading-none">OrquiGame</h1>
+                    <p class="text-[10px] text-slate-400 font-medium mt-0.5">App Botânico Interativo</p>
+                </div>
+            </div>
+
+            <!-- Centro: Botão Tela Cheia Global -->
+            <button onclick="toggleFullScreen()" class="p-2 bg-slate-800/80 hover:bg-slate-700/80 text-orchid-400 border border-slate-700/80 rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center">
+                <i data-lucide="maximize" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Direita: Score Pill -->
+            <div class="flex items-center space-x-1.5 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                <i data-lucide="star" class="w-3.5 h-3.5 text-gold-400 fill-gold-400"></i>
+                <span id="user-score" class="font-black text-xs text-gold-400">0</span>
+                <span class="text-[9px] text-slate-400 font-medium">pts</span>
+            </div>
+
+        </header>
+
+        <!-- ÁREA CENTRAL DE CONTEÚDO (SCROLLABLE) -->
+       <main class="flex-1 relative overflow-y-auto overflow-x-hidden no-scrollbar px-4 sm:px-8 py-6 pb-36 max-w-5xl mx-auto w-full">
+
+            <!-- TELA 0: CAPA / SPLASH INICIAL -->
+            <section id="sec-start" class="tab-content flex flex-col items-center justify-between min-h-full py-4 text-center space-y-6">
+                <div class="space-y-2">
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-gold-400 bg-gold-500/10 border border-gold-500/30 px-3 py-1 rounded-full">
+                        <i data-lucide="sparkles" class="w-3 h-3 text-gold-400"></i> Edição Científica
+                    </span>
+                    <h2 class="text-2xl font-black text-slate-100 leading-tight">
+                        Desafio <br><span class="bg-gradient-to-r from-orchid-400 via-pink-300 to-gold-400 bg-clip-text text-transparent">Orchidaceae</span>
+                    </h2>
+                    <p class="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+                        Aprenda a anatomia, estratégias de polinização e cultivo correto das orquídeas através de um jogo interativo!
+                    </p>
+                </div>
+
+                <!-- Orquídea Ilustrada Principal -->
+                <div class="relative w-48 h-48 bg-slate-950/80 rounded-full border-2 border-orchid-500/40 p-4 shadow-2xl flex items-center justify-center my-2 group">
+                    <div class="absolute inset-0 bg-orchid-500/10 rounded-full blur-xl"></div>
+                    <svg viewBox="0 0 500 500" class="w-full h-full drop-shadow-[0_0_20px_rgba(217,70,239,0.7)] animate-pulse">
+                        <defs>
+                            <linearGradient id="sepalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#c026d3" />
+                                <stop offset="100%" stop-color="#4a044e" />
+                            </linearGradient>
+                            <linearGradient id="petalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#e879f9" />
+                                <stop offset="100%" stop-color="#86198f" />
+                            </linearGradient>
+                            <linearGradient id="lipGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#facc15" />
+                                <stop offset="50%" stop-color="#e11d48" />
+                                <stop offset="100%" stop-color="#881337" />
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#sepalGrad)" stroke="#fbcfe8" stroke-width="2" d="M250,230 C220,120 210,60 250,30 C290,60 280,120 250,230 Z" />
+                        <path fill="url(#sepalGrad)" stroke="#fbcfe8" stroke-width="2" d="M250,230 C170,260 90,320 110,420 C180,410 220,320 250,230 Z" />
+                        <path fill="url(#sepalGrad)" stroke="#fbcfe8" stroke-width="2" d="M250,230 C330,260 410,320 390,420 C320,410 280,320 250,230 Z" />
+                        <path fill="url(#petalGrad)" stroke="#ffffff" stroke-width="2" d="M250,230 C150,150 40,190 70,270 C120,310 210,270 250,230 Z" />
+                        <path fill="url(#petalGrad)" stroke="#ffffff" stroke-width="2" d="M250,230 C350,150 460,190 430,270 C380,310 290,270 250,230 Z" />
+                        <path fill="url(#lipGrad)" stroke="#fef08a" stroke-width="2" d="M250,230 C200,280 160,350 210,430 C250,470 250,470 290,430 C340,350 300,280 250,230 Z" />
+                        <ellipse cx="250" cy="225" rx="18" ry="32" fill="#ffffff" stroke="#fbcfe8" stroke-width="2" />
+                        <circle cx="250" cy="205" r="9" fill="#fef9c3" stroke="#eab308" stroke-width="2" />
+                    </svg>
+                </div>
+
+                <!-- Botões de Ação na Tela Inicial -->
+                <div class="w-full space-y-3 pt-2">
+                    <button onclick="switchTab('cards')" class="w-full py-3.5 px-6 bg-gradient-to-r from-orchid-600 via-orchid-500 to-pink-600 text-white font-bold rounded-2xl shadow-lg shadow-orchid-900/50 touch-active flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="play" class="w-4 h-4 fill-white"></i> Iniciar Jogo Interativo
+                    </button>
+                    <button onclick="switchTab('home')" class="w-full py-3 px-6 bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-2xl touch-active flex items-center justify-center gap-2 text-xs">
+                        <i data-lucide="layout-grid" class="w-4 h-4 text-orchid-400"></i> Ver Todos os Módulos
+                    </button>
+                </div>
+            </section>
+
+            <!-- TELA 1: SELEÇÃO DE MÓDULOS (MENU COMPLETO) -->
+            <section id="sec-home" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                        <i data-lucide="layout-grid" class="w-4 h-4 text-orchid-400"></i> Módulos do Jogo
+                    </h3>
+                    <span class="text-[10px] text-slate-400 font-medium">Escolha para jogar</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3">
+                    <div onclick="switchTab('cards')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-orchid-600/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-orchid-950 text-orchid-300 border border-orchid-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="layers" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-orchid-300">Flashcards 3D</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">8 Cards interativos em flip 3D</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <div onclick="switchTab('anatomy')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-pink-600/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-pink-950 text-pink-300 border border-pink-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="flower-2" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-pink-300">Explorador Anatômico</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Modelo floral interativo com mapa SVG</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <div onclick="switchTab('quiz')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-botanic-600/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-botanic-950 text-botanic-300 border border-botanic-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="brain" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-botanic-300">Quiz de Botânica</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Desafio de 10 perguntas auditadas</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <div onclick="switchTab('care')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-amber-600/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-950 text-amber-300 border border-amber-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="sprout" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-amber-300">Simulador de Cultivo</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Ajuste rega, substrato e luz solar</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <div onclick="switchTab('refs')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-blue-600/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-950 text-blue-300 border border-blue-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="book-open" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-blue-300">Referências Acadêmicas</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Artigos e livros para auditoria de dados</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+
+                    <div onclick="switchTab('badges')" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 hover:border-gold-500/80 shadow-lg cursor-pointer touch-active flex items-center justify-between group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-gold-950 text-gold-300 border border-gold-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="trophy" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100 text-xs group-hover:text-gold-300">Galeria de Troféus</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Sua coleção de conquistas e pontos</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TELA 2: FLASHCARDS 3D (FONTE MAXIMIZADA) -->
+<section id="sec-cards" class="tab-content hidden space-y-5">
+    <!-- Topo: Contador e Status -->
+    <div class="flex justify-between items-center px-1">
+        <span id="card-num" class="text-xs font-black uppercase tracking-wider text-orchid-300 bg-orchid-950 px-3.5 py-1.5 rounded-full border border-orchid-800 shadow-sm">
+            Card 1 de 8
+        </span>
+        <span id="card-status-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
+            Não visto
+        </span>
+    </div>
+
+    <!-- Flashcard 3D Expandido (h-96) -->
+    <div class="perspective-1000 w-full h-96 cursor-pointer" onclick="flipCard()">
+        <div id="flashcard-element" class="relative w-full h-full duration-500 transform-style-3d transition-transform">
+            
+            <!-- Card Frente -->
+            <div class="absolute w-full h-full backface-hidden bg-gradient-to-br from-slate-950 via-orchid-950/50 to-slate-950 border-2 border-orchid-600/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-2xl shadow-orchid-950/30">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-extrabold text-orchid-300 uppercase tracking-wider flex items-center gap-1.5 bg-orchid-950/80 px-2.5 py-1 rounded-lg border border-orchid-800/60">
+                        <i data-lucide="help-circle" class="w-4 h-4 text-orchid-400"></i> Pergunta
+                    </span>
+                    <div class="w-8 h-8 rounded-full bg-slate-900/80 flex items-center justify-center border border-slate-800">
+                        <i data-lucide="rotate-cw" class="w-4 h-4 text-slate-300"></i>
+                    </div>
+                </div>
+                
+                <!-- Pergunta e Descrição em Tamanho Extra Gigante -->
+                <div class="my-auto text-center space-y-3 px-1">
+                    <h3 id="card-front-title" class="text-2xl sm:text-3xl font-black text-slate-100 leading-snug tracking-wide">
+                        Título
+                    </h3>
+                    <p id="card-front-desc" class="text-lg sm:text-xl text-slate-200 leading-relaxed font-bold">
+                        Descrição...
+                    </p>
+                </div>
+                
+                <p class="text-xs text-slate-400 text-center font-bold tracking-wide flex items-center justify-center gap-1">
+                    <span>Toque para virar</span> <span class="text-sm">🔄</span>
+                </p>
+            </div>
+
+            <!-- Card Verso -->
+            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-gradient-to-br from-slate-950 via-botanic-950/50 to-slate-950 border-2 border-botanic-500/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-2xl shadow-botanic-950/30">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-extrabold text-botanic-300 uppercase tracking-wider flex items-center gap-1.5 bg-botanic-950/80 px-2.5 py-1 rounded-lg border border-botanic-800/60">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-botanic-400"></i> Explicação
+                    </span>
+                    <span id="card-source-tag" class="text-xs text-slate-400 italic bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
+                        Fonte
+                    </span>
+                </div>
+                
+                <!-- Resposta em Tamanho Extra Gigante -->
+                <div class="my-auto px-1">
+                    <p id="card-back-text" class="text-lg sm:text-xl text-slate-100 leading-relaxed font-bold text-center">
+                        Resposta...
+                    </p>
+                </div>
+                
+                <p class="text-xs text-slate-400 text-center font-bold tracking-wide flex items-center justify-center gap-1">
+                    <span>Toque para desvirar</span> <span class="text-sm">🔄</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles do Flashcard -->
+    <div class="flex justify-between items-center gap-3 pt-1">
+        <button onclick="prevFlashcard()" class="p-4 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl text-slate-200 touch-active shadow-md transition-all active:scale-95">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+        </button>
+        
+        <div class="flex gap-2.5 flex-1 justify-center max-w-[280px]">
+            <button onclick="markCardStatus(false)" class="flex-1 py-3.5 px-3 bg-amber-950/90 border border-amber-700/80 hover:bg-amber-900 text-amber-200 text-xs sm:text-sm font-black rounded-2xl touch-active flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                <i data-lucide="x-circle" class="w-4 h-4 text-amber-400"></i> Revisar
+            </button>
+            <button onclick="markCardStatus(true)" class="flex-1 py-3.5 px-3 bg-botanic-950/90 border border-botanic-700/80 hover:bg-botanic-900 text-botanic-200 text-xs sm:text-sm font-black rounded-2xl touch-active flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-botanic-400"></i> Sei!
+            </button>
+        </div>
+        
+        <button onclick="nextFlashcard()" class="p-4 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl text-slate-200 touch-active shadow-md transition-all active:scale-95">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+        </button>
+    </div>
+</section>
+
+            <!-- TELA 3: EXPLORADOR DE ANATOMIA (SVG) -->
+<section id="sec-anatomy" class="tab-content hidden space-y-4">
+    <div class="flex justify-between items-center pb-1">
+        <div>
+            <span id="anatomy-badge-mode" class="text-[10px] font-bold uppercase tracking-wider text-pink-400 bg-pink-950 px-2.5 py-0.5 rounded-full border border-pink-800">Modo Livre</span>
+            <h3 class="text-sm font-black text-slate-100 mt-1">Morfologia Floral</h3>
+        </div>
+        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button id="btn-ana-explore" onclick="setAnatomyMode('explore')" class="py-1 px-2.5 rounded-lg text-[10px] font-bold bg-orchid-950 text-orchid-300 border border-orchid-800">Explorar</button>
+            <button id="btn-ana-quiz" onclick="setAnatomyMode('quiz')" class="py-1 px-2.5 rounded-lg text-[10px] font-bold text-slate-400">Desafio</button>
+        </div>
+    </div>
+
+    <!-- Container com largura total e SVG maximizado -->
+    <div class="bg-slate-950 p-1 rounded-2xl border border-slate-800/80 flex justify-center items-center shadow-inner overflow-hidden">
+        <svg viewBox="20 20 460 460" class="w-full h-80 max-w-[350px] drop-shadow-[0_0_22px_rgba(217,70,239,0.65)] transition-all duration-300">
+            <!-- Sépalas -->
+            <path id="part-sepal-dorsal" onclick="selectFlowerPart('sepal')" class="flower-part fill-orchid-900 stroke-orchid-300 cursor-pointer" stroke-width="2" d="M250,230 C220,120 210,60 250,30 C290,60 280,120 250,230 Z" />
+            <path id="part-sepal-left" onclick="selectFlowerPart('sepal')" class="flower-part fill-orchid-900 stroke-orchid-300 cursor-pointer" stroke-width="2" d="M250,230 C170,260 90,320 110,420 C180,410 220,320 250,230 Z" />
+            <path id="part-sepal-right" onclick="selectFlowerPart('sepal')" class="flower-part fill-orchid-900 stroke-orchid-300 cursor-pointer" stroke-width="2" d="M250,230 C330,260 410,320 390,420 C320,410 280,320 250,230 Z" />
+            <!-- Pétalas -->
+            <path id="part-petal-left" onclick="selectFlowerPart('petal')" class="flower-part fill-pink-600 stroke-pink-200 cursor-pointer" stroke-width="2" d="M250,230 C150,150 40,190 70,270 C120,310 210,270 250,230 Z" />
+            <path id="part-petal-right" onclick="selectFlowerPart('petal')" class="flower-part fill-pink-600 stroke-pink-200 cursor-pointer" stroke-width="2" d="M250,230 C350,150 460,190 430,270 C380,310 290,270 250,230 Z" />
+            <!-- Labelo -->
+            <path id="part-labellum" onclick="selectFlowerPart('labellum')" class="flower-part fill-rose-700 stroke-gold-400 cursor-pointer" stroke-width="2" d="M250,230 C200,280 160,350 210,430 C250,470 250,470 290,430 C340,350 300,280 250,230 Z" />
+            <!-- Coluna (Área de toque ainda mais confortável) -->
+            <ellipse id="part-column" onclick="selectFlowerPart('column')" class="flower-part fill-slate-100 stroke-slate-300 cursor-pointer" cx="250" cy="225" rx="25" ry="40" stroke-width="2" />
+            <!-- Políneas (Área de toque ainda mais confortável) -->
+            <circle id="part-pollinia" onclick="selectFlowerPart('pollinia')" class="flower-part fill-gold-400 stroke-gold-600 cursor-pointer" cx="250" cy="205" r="14" stroke-width="2" />
+        </svg>
+    </div>
+
+    <div id="anatomy-info-card" class="bg-slate-950 p-4 rounded-2xl border border-slate-800 min-h-[120px] flex flex-col justify-center text-center">
+        <i data-lucide="mouse-pointer-click" class="w-6 h-6 text-orchid-400 mx-auto mb-2 animate-bounce"></i>
+        <h4 class="font-bold text-slate-200 text-xs">Toque em qualquer estrutura da flor acima</h4>
+        <p class="text-[10px] text-slate-400 mt-1">Aprenda os nomes científicos e funções de cada parte.</p>
+    </div>
+</section>
+
+            <!-- TELA 4: QUIZ INTERATIVO (VERSÃO XL) -->
+<section id="sec-quiz" class="tab-content hidden space-y-4">
+    <div class="bg-slate-950 p-4 sm:p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-5">
+        
+        <!-- Topo: Categoria e Contador -->
+        <div class="flex justify-between items-center">
+            <span id="quiz-category" class="text-xs font-black uppercase tracking-wider text-botanic-300 bg-botanic-950 px-3.5 py-1.5 rounded-full border border-botanic-700 shadow-sm">
+                Habitats
+            </span>
+            <span class="text-sm font-black text-slate-200 bg-slate-900 px-3.5 py-1.5 rounded-xl border border-slate-800">
+                Questão <span id="quiz-current" class="text-gold-400">1</span>/<span id="quiz-total">10</span>
+            </span>
+        </div>
+
+        <!-- Barra de Progresso Encorpada -->
+        <div class="w-full bg-slate-900 h-3.5 rounded-full overflow-hidden border border-slate-800 p-0.5">
+            <div id="quiz-progress" class="bg-gradient-to-r from-botanic-500 via-orchid-500 to-gold-400 h-full rounded-full w-0 transition-all duration-500 shadow-[0_0_12px_rgba(217,70,239,0.6)]"></div>
+        </div>
+
+        <!-- Pergunta Gigante -->
+        <div class="py-1">
+            <h3 id="quiz-question" class="text-lg sm:text-xl font-black text-slate-100 leading-snug tracking-wide">
+                Carregando pergunta...
+            </h3>
+        </div>
+
+        <!-- Opções de Resposta Geradas Dinamicamente -->
+        <div id="quiz-options" class="space-y-3.5 pt-1"></div>
+
+        <!-- Feedback da Resposta -->
+        <div id="quiz-feedback" class="hidden p-4 rounded-2xl text-sm font-semibold leading-relaxed border border-slate-800 bg-slate-900 shadow-md"></div>
+
+        <!-- Botão Próxima Questão -->
+        <button id="btn-next-question" onclick="nextQuestion()" class="hidden w-full bg-gradient-to-r from-orchid-600 via-pink-600 to-orchid-700 hover:from-orchid-500 hover:to-pink-500 text-white font-black py-4 rounded-2xl touch-active flex items-center justify-center gap-2.5 text-base shadow-lg shadow-orchid-950/50 transition-all uppercase tracking-wider">
+            Próxima Questão <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        </button>
+    </div>
+</section>
+
+            <!-- TELA 5: SIMULADOR DE CULTIVO -->
+<section id="sec-care" class="tab-content hidden space-y-4 pb-12">
+    <!-- Cabeçalho do Módulo -->
+    <div class="text-center space-y-1">
+        <h2 class="text-xl font-bold text-slate-100 flex items-center justify-center gap-2">
+            <i data-lucide="sprout" class="w-5 h-5 text-emerald-400"></i> Simulador de Cultivo
+        </h2>
+        <p class="text-xs text-slate-400">Equilibre os fatores ambientais para fazer a sua orquídea florescer.</p>
+    </div>
+
+    <!-- 1. SELETOR DE ESPÉCIE -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+        <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <span>Selecione a Espécie:</span>
+            <span id="cultivo-dificuldade" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/50">Fácil</span>
+        </label>
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="selecionarEspecie('phalaenopsis')" id="btn-phalaenopsis" class="btn-especie p-2 rounded-xl border border-orchid-500/80 bg-orchid-950/40 text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-all">
+                <span>Phalaenopsis</span>
+                <span class="text-[9px] font-normal text-slate-400">Iniciante</span>
+            </button>
+            <button onclick="selecionarEspecie('cattleya')" id="btn-cattleya" class="btn-especie p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 text-xs font-semibold flex flex-col items-center gap-1 transition-all">
+                <span>Cattleya</span>
+                <span class="text-[9px] font-normal text-slate-400">Intermediário</span>
+            </button>
+            <button onclick="selecionarEspecie('dendrobium')" id="btn-dendrobium" class="btn-especie p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 text-xs font-semibold flex flex-col items-center gap-1 transition-all">
+                <span>Dendrobium</span>
+                <span class="text-[9px] font-normal text-slate-400">Avançado</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. STATUS DA PLANTA & BARRA DE SAÚDE -->
+<div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 text-center">
+    <div class="flex items-center justify-between text-xs font-bold">
+        <span class="text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="heart" class="w-4 h-4 text-rose-500"></i> Saúde da Orquídea:
+        </span>
+        <span id="cultivo-saude-texto" class="text-rose-500 font-extrabold text-sm">0%</span>
+    </div>
+
+    <!-- Barra de progresso da saúde iniciada vazia/vermelha -->
+    <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+        <div id="cultivo-saude-barra" class="h-full bg-gradient-to-r from-rose-600 to-red-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+    </div>
+
+    <div class="relative py-4 flex flex-col items-center justify-center">
+        <div class="w-24 h-24 rounded-full bg-slate-950 border border-slate-800/80 flex items-center justify-center shadow-inner transition-all duration-300">
+            <i data-lucide="flower-2" class="w-14 h-14 text-orchid-400 transition-all duration-300"></i>
+        </div>
+        <span id="cultivo-estagio-texto" class="mt-2 text-xs font-bold text-slate-200">Estado: Crítico (Murchando/Definhando)</span>
+    </div>
+
+    <div id="cultivo-conselho" class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300 text-xs text-left flex items-start gap-2.5">
+        <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+        <p id="cultivo-conselho-texto" class="text-[11px] leading-relaxed">
+            Perigo Crítico! A Phalaenopsis precisa de rega e luz ajustadas para sair do estado de estresse.
+        </p>
+    </div>
+</div>
+
+   <!-- 3. SLIDERS DE CONTROLE (INICIAM DESAJUSTADOS EM 20%) -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <!-- Slider 1: Rega / Umidade -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+                <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="droplet" class="w-3.5 h-3.5 text-blue-400"></i> Umidade / Rega</span>
+                <span id="val-rega" class="text-blue-400 font-bold">20%</span>
+            </div>
+            <input type="range" id="slider-rega" min="0" max="100" value="20" oninput="atualizarSimuladorCultivo()" class="w-full accent-blue-500 bg-slate-950 rounded-lg h-2 cursor-pointer">
+            <div class="flex justify-between text-[9px] text-slate-500 font-medium">
+                <span>0% (Seco)</span>
+                <span>50% (Moderado)</span>
+                <span>100% (Encharcado)</span>
+            </div>
+        </div>
+
+        <!-- Slider 2: Substrato -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+                <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="layers" class="w-3.5 h-3.5 text-amber-500"></i> Aeração do Substrato</span>
+                <span id="val-substrato" class="text-amber-400 font-bold">20%</span>
+            </div>
+            <input type="range" id="slider-substrato" min="0" max="100" value="20" oninput="atualizarSimuladorCultivo()" class="w-full accent-amber-500 bg-slate-950 rounded-lg h-2 cursor-pointer">
+            <div class="flex justify-between text-[9px] text-slate-500 font-medium">
+                <span>0% (Terra)</span>
+                <span>50% (Misto)</span>
+                <span>100% (Brita)</span>
+            </div>
+        </div>
+
+        <!-- Slider 3: Luminosidade -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+                <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i> Intensidade de Luz</span>
+                <span id="val-luz" class="text-amber-300 font-bold">20%</span>
+            </div>
+            <input type="range" id="slider-luz" min="0" max="100" value="20" oninput="atualizarSimuladorCultivo()" class="w-full accent-amber-400 bg-slate-950 rounded-lg h-2 cursor-pointer">
+            <div class="flex justify-between text-[9px] text-slate-500 font-medium">
+                <span>0% (Sombra)</span>
+                <span>50% (Filtrada)</span>
+                <span>100% (Sol Direto)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. AÇÃO: AVANÇAR DIAS DE CULTIVO -->
+    <button onclick="avancarDiasCultivo()" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-900/30 active:scale-98 transition-all">
+        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Avançar 7 Dias de Cultivo
+    </button>
+</section>
+
+<!-- TELA 6: REFERÊNCIAS ACADÊMICAS -->
+            <section id="sec-refs" class="tab-content hidden space-y-4">
+                <div class="space-y-1">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-botanic-400 bg-botanic-950 px-2.5 py-0.5 rounded-full border border-botanic-800 inline-flex items-center gap-1">
+                        <i data-lucide="shield-check" class="w-3 h-3 text-botanic-400"></i> Auditoria Científica
+                    </span>
+                    <h3 class="text-base font-black text-slate-100">Fontes & Literatura Botânica</h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        Toda a lógica anatômica e de cultivo do <strong>OrquiGame</strong> é embasada nos principais compêndios botânicos do mundo:
+                    </p>
+                </div>
+
+                <div id="references-cards-container" class="space-y-3"></div>
+            </section>
+
+            <!-- TELA 7: TROFÉUS / BADGES -->
+            <section id="sec-badges" class="tab-content hidden space-y-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-100">Suas Conquistas</h3>
+                        <p class="text-[10px] text-slate-400">Complete as tarefas para desbloquear</p>
+                    </div>
+                    <button onclick="resetGameProgress()" class="text-[10px] text-slate-500 underline">Zerar</button>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2" id="badges-container"></div>
+            </section>
+
+        </main>
+
+      <!-- Menu Navegação Inferior (Mobile Fix) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/98 backdrop-blur-lg border-t border-slate-800 z-50 px-1 py-2 pb-safe shadow-2xl">
+    <div class="grid grid-cols-7 gap-0.5 max-w-md mx-auto">
+        <button onclick="switchTab('start')" id="mob-start" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-orchid-400 touch-active">
+            <i data-lucide="home" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Início</span>
+        </button>
+        <button onclick="switchTab('cards')" id="mob-cards" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Cards</span>
+        </button>
+        <button onclick="switchTab('anatomy')" id="mob-anatomy" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="flower-2" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Anatomia</span>
+        </button>
+        <button onclick="switchTab('quiz')" id="mob-quiz" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="brain" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Quiz</span>
+        </button>
+        <button onclick="switchTab('care')" id="mob-care" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="sprout" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Cultivo</span>
+        </button>
+        <button onclick="switchTab('refs')" id="mob-refs" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Fontes</span>
+        </button>
+        <button onclick="switchTab('badges')" id="mob-badges" class="mob-nav-btn flex flex-col items-center py-1.5 px-0.5 rounded-xl text-slate-400 touch-active">
+            <i data-lucide="trophy" class="w-4 h-4"></i>
+            <span class="text-[8px] font-bold mt-1">Troféus</span>
+</button>
+    </div>
+</nav>
+
+        <!-- Toast de Notificações -->
+        <div id="toast" class="absolute top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 transform -translate-y-4 w-11/12 max-w-xs text-xs font-bold p-3 rounded-xl border text-center shadow-2xl"></div>
+
+    </div>
+
+    <!-- SCRIPT DE LÓGICA DO JOGO -->
+    <script>
+        // Estado do Jogo
+        let gameState = {
+            score: 0,
+            quizIndex: 0,
+            quizAnswered: false,
+            carePlantType: 'epiphyte',
+            careSubstrate: 'bark',
+            careLight: 2,
+            careWater: 2,
+            cardIndex: 0,
+            cardFlipped: false,
+            anatomyMode: 'explore',
+            anatomyTargetPart: null,
+            reviewedCards: {},
+            unlockedBadges: []
+        };
+
+        const FLASHCARDS = [
+            { title: "Epífitas NÃO são Parasitas", desc: "Elas retiram seiva das árvores?", a: "NÃO! Utilizam o tronco apenas como suporte físico para luz solar, sem retirar nutrientes do hospedeiro.", source: "Dressler (1993)" },
+            { title: "Pseudocopulação", desc: "Como orquídeas atrai insetos machos?", a: "Imitam a forma e os feromônios de fêmeas de insetos, induzindo o acasalamento e transferindo políneas.", source: "van der Pijl (1966)" },
+            { title: "O que é o Labelo?", desc: "Qual a função dessa pétala?", a: "É a 3ª pétala adaptada como plataforma de pouso para guiar polinizadores até a coluna reprodutiva.", source: "Pridgeon (1999)" },
+            { title: "A Coluna (Gynostemium)", desc: "O que há no centro da flor?", a: "Órgãos masculino e feminino fundidos em uma única estrutura tubular exclusiva de Orchidaceae.", source: "Chase et al. (2015)" },
+            { title: "Velame Radicular", desc: "Como absorvem umidade?", a: "Possuem camada celular externa esponjosa que retém água da chuva e névoa rapidamente.", source: "Dressler (1993)" },
+            { title: "Sementes Microscópicas", desc: "Por que parecem poeira?", a: "Não possuem endosperma (reserva) e dependem de fungos micorrízicos para germinar na natureza.", source: "Pridgeon (2001)" },
+            { title: "A Baunilha", desc: "Qual tempero vem de orquídea?", a: "A baunilha verdadeira! Os frutos secos da orquídea Vanilla fornecem o aroma natural.", source: "Flora do Brasil" }
+        ];
+
+        const ANATOMY_DATA = {
+            sepal: { title: "Sépalas", desc: "Folhas modificadas do verticilo externo que protegem o botão e atraem polinizadores." },
+            petal: { title: "Pétalas Laterais", desc: "Proporcionam a simetria bilateral (zigomorfa) característica da flor." },
+            labellum: { title: "Labelo", desc: "Pétala inferior modificada como pista de pouso para insetos." },
+            column: { title: "Coluna", desc: "Especialização única onde órgãos masculinos e femininos são fundidos." },
+            pollinia: { title: "Políneas", desc: "Massas de pólen agregadas com disco adesivo para colar no polinizador." }
+        };
+
+        const QUIZ_QUESTIONS = [
+            { category: "Habitats", question: "O que caracteriza uma orquídea EPÍFITA?", options: ["Planta carnívora", "Usa troncos como suporte sem parasitismo", "Planta subterrânea", "Suga seiva das árvores"], correct: 1, explanation: "Epífitas usam árvores apenas como suporte físico." },
+            { category: "Anatomia", question: "Qual pétala funciona como 'plataforma de pouso'?", options: ["Labelo", "Sépala", "Velame", "Pseudobulbo"], correct: 0, explanation: "O Labelo orienta o inseto polinizador." },
+            { category: "Polinização", question: "O que é 'Pseudocopulação'?", options: ["Aquecimento das pétalas", "Mimetismo químico e visual de insetos fêmeas", "Dispersão pelo vento", "Autofertilização"], correct: 1, explanation: "A flor emite feromônios idênticos aos de fêmeas de insetos." },
+            { category: "Cultivo", question: "Por que epífitas morrem em terra comum de jardim?", options: ["Falta de sol", "Falta de aeração sufoca as raízes", "Cor das flores muda", "Consumo rápido de adubo"], correct: 1, explanation: "Raízes de epífitas precisam de circulação de ar livre." }
+        ];
+
+        // LISTA EXPANDIDA DE CONQUISTAS
+        const ACHIEVEMENTS = [
+            { id: 'first_click', title: 'Explorador', desc: 'Tocou em uma estrutura anatômica', icon: 'search' },
+            { id: 'cards_master', title: 'Expert em Cards', desc: 'Revisou todos os Flashcards', icon: 'layers' },
+            { id: 'quiz_master', title: 'Gênio do Quiz', desc: 'Concluiu o Quiz de Botânica', icon: 'brain' },
+            { id: 'care_master', title: 'Mestre Cultivador', desc: 'Fez uma orquídea florir no simulador', icon: 'sprout' },
+            { id: 'anatomy_quiz_master', title: 'Botânico Expert', desc: 'Completou o Desafio de Anatomia', icon: 'award' },
+            { id: 'scholar', title: 'Pesquisador', desc: 'Consultou as Fontes Acadêmicas', icon: 'book-open' },
+            { id: 'score_100', title: 'Colecionador de Estrelas', desc: 'Alcançou 100 pontos no jogo', icon: 'star' }
+        ];
+
+       // COLEÇÃO COMPLETA DE REFERÊNCIAS ACADÊMICAS (5 FONTES)
+        const ACADEMIC_REFERENCES = [
+            { 
+                title: "Phylogeny and Classification of the Orchid Family", 
+                authors: "Dressler, R. L. (1993)", 
+                type: "Livro de Referência",
+                tagColor: "bg-purple-950 text-purple-300 border-purple-800",
+                summary: "A 'bíblia' da taxonomia de Orchidaceae. Fundamenta a explicação sobre o velame radicular e evolução da coluna florística." 
+            },
+            { 
+                title: "An updated classification of Orchidaceae", 
+                authors: "Chase, M. W. et al. (2015)", 
+                type: "Artigo Molecular",
+                tagColor: "bg-blue-950 text-blue-300 border-blue-800",
+                summary: "Classificação citogenética e filogenética moderna que divide a família Orchidaceae em 5 subfamílias." 
+            },
+            { 
+                title: "Orchid Pollination by Sexual Deception", 
+                authors: "van der Pijl, L. & Dodson, C. H. (1966)", 
+                type: "Estudo de Polinização",
+                tagColor: "bg-rose-950 text-rose-300 border-rose-800",
+                summary: "Estudo clássico sobre os mecanismos de pseudocopulação e mimetismo feromonial em orquídeas." 
+            },
+            { 
+                title: "Genera Orchidacearum (Vols. 1-6)", 
+                authors: "Pridgeon, A. M. et al. (1999–2014)", 
+                type: "Monografia Botânica",
+                tagColor: "bg-amber-950 text-amber-300 border-amber-800",
+                summary: "Compêndio enciclopédico sobre a morfologia, germinação de sementes microscópicas e associações micorrízicas." 
+            },
+            { 
+                title: "Flora e Funga do Brasil", 
+                authors: "Jardim Botânico do Rio de Janeiro", 
+                type: "Catálogo Oficial (REFLORA)",
+                tagColor: "bg-emerald-950 text-emerald-300 border-emerald-800",
+                summary: "Base nacional contendo a distribuição e identificação taxonômica das mais de 2.500 espécies de orquídeas nativas." 
+            }
+        ];
+
+       function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+                btn.classList.remove('text-orchid-400');
+                btn.classList.add('text-slate-400');
+            });
+
+            const targetSec = document.getElementById(`sec-${tabId}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+
+            const mobBtn = document.getElementById(`mob-${tabId}`);
+            if (mobBtn) {
+                mobBtn.classList.remove('text-slate-400');
+                mobBtn.classList.add('text-orchid-400');
+            }
+
+            // Oculta o cabeçalho apenas na Tela Inicial/Splash
+            const header = document.getElementById('app-header');
+            if (header) {
+                if (tabId === 'start') {
+                    header.classList.add('hidden');
+                } else {
+                    header.classList.remove('hidden');
+                }
+            }
+        }
+
+        // --- FLASHCARDS LOGIC ---
+        function flipCard() {
+            const cardEl = document.getElementById('flashcard-element');
+            gameState.cardFlipped = !gameState.cardFlipped;
+            if (gameState.cardFlipped) cardEl.classList.add('rotate-y-180');
+            else cardEl.classList.remove('rotate-y-180');
+        }
+
+        function updateFlashcardUI() {
+            const card = FLASHCARDS[gameState.cardIndex];
+            document.getElementById('card-num').innerText = `Card ${gameState.cardIndex + 1} de ${FLASHCARDS.length}`;
+            document.getElementById('card-front-title').innerText = card.title;
+            document.getElementById('card-front-desc').innerText = card.desc;
+            document.getElementById('card-back-text').innerText = card.a;
+            document.getElementById('card-source-tag').innerText = card.source;
+
+            if (gameState.cardFlipped) flipCard();
+
+            if (Object.keys(gameState.reviewedCards).length >= FLASHCARDS.length) {
+                unlockBadge('cards_master');
+            }
+        }
+
+        function markCardStatus(known) {
+    // Verifica se o card atual ainda não tinha sido marcado como "Sei!" (true)
+    const wasAlreadyKnown = gameState.reviewedCards[gameState.cardIndex] === true;
+
+    gameState.reviewedCards[gameState.cardIndex] = known;
+
+    // Atribui pontos apenas se for a PRIMEIRA vez que marca como "Sei!"
+    if (known && !wasAlreadyKnown) {
+        addScore(5);
+    }
+
+    nextFlashcard();
+}
+
+        function nextFlashcard() {
+            gameState.cardIndex = (gameState.cardIndex + 1) % FLASHCARDS.length;
+            updateFlashcardUI();
+        }
+
+        function prevFlashcard() {
+            gameState.cardIndex = (gameState.cardIndex - 1 + FLASHCARDS.length) % FLASHCARDS.length;
+            updateFlashcardUI();
+        }
+
+        // --- ANATOMY INTERACTION ---
+        function setAnatomyMode(mode) {
+            gameState.anatomyMode = mode;
+            const btnExp = document.getElementById('btn-ana-explore');
+            const btnQuiz = document.getElementById('btn-ana-quiz');
+            const badge = document.getElementById('anatomy-badge-mode');
+
+            if (mode === 'explore') {
+                btnExp.className = "py-1 px-2.5 rounded-lg text-[10px] font-bold bg-orchid-950 text-orchid-300 border border-orchid-800";
+                btnQuiz.className = "py-1 px-2.5 rounded-lg text-[10px] font-bold text-slate-400";
+                badge.innerText = "Modo Livre";
+            } else {
+                btnQuiz.className = "py-1 px-2.5 rounded-lg text-[10px] font-bold bg-gold-950 text-gold-300 border border-gold-800";
+                btnExp.className = "py-1 px-2.5 rounded-lg text-[10px] font-bold text-slate-400";
+                badge.innerText = "Modo Desafio";
+                // Reinicia a lista de partes pendentes do Quiz
+                gameState.quizRemainingParts = Object.keys(ANATOMY_DATA);
+                startAnatomyQuiz();
+            }
+        }
+
+        function startAnatomyQuiz() {
+            // Se já respondeu a todas as partes, conclui o desafio com destaque ampliado
+            if (!gameState.quizRemainingParts || gameState.quizRemainingParts.length === 0) {
+                document.getElementById('anatomy-info-card').innerHTML = `
+                    <div class="space-y-2 text-center py-3">
+                        <span class="text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800 shadow-md">
+                            🏆 Parabéns!
+                        </span>
+                        <h4 class="font-black text-base text-slate-100 mt-1">Desafio Concluído!</h4>
+                        <p class="text-xs text-slate-300">Identificou todas as partes da orquídea com sucesso.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sorteia apenas entre as partes que AINDA NÃO foram acertadas
+            const randomIndex = Math.floor(Math.random() * gameState.quizRemainingParts.length);
+            gameState.anatomyTargetPart = gameState.quizRemainingParts[randomIndex];
+            const targetData = ANATOMY_DATA[gameState.anatomyTargetPart];
+
+            document.getElementById('anatomy-info-card').innerHTML = `
+                <div class="space-y-1">
+                    <span class="text-[9px] font-bold uppercase text-gold-400 bg-gold-950 px-2 py-0.5 rounded-full border border-gold-800">Encontre a parte (${gameState.quizRemainingParts.length} restantes)</span>
+                    <h4 class="font-bold text-xs text-slate-100">${targetData.title}</h4>
+                    <p class="text-[10px] text-slate-400">${targetData.desc}</p>
+                </div>
+            `;
+        }
+
+        function selectFlowerPart(partKey) {
+            document.querySelectorAll('.flower-part').forEach(p => p.classList.remove('selected'));
+
+            if (partKey === 'sepal') document.querySelectorAll('#part-sepal-dorsal, #part-sepal-left, #part-sepal-right').forEach(e => e.classList.add('selected'));
+            else if (partKey === 'petal') document.querySelectorAll('#part-petal-left, #part-petal-right').forEach(e => e.classList.add('selected'));
+            else if (document.getElementById(`part-${partKey}`)) document.getElementById(`part-${partKey}`).classList.add('selected');
+
+            if (gameState.anatomyMode === 'explore') {
+                const data = ANATOMY_DATA[partKey];
+                document.getElementById('anatomy-info-card').innerHTML = `
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-xs text-orchid-300">${data.title}</h4>
+                        <p class="text-[10px] text-slate-300 leading-relaxed">${data.desc}</p>
+                    </div>
+                `;
+
+                if (!gameState.exploredParts) {
+                    gameState.exploredParts = new Set();
+                }
+
+                if (!gameState.exploredParts.has(partKey)) {
+                    gameState.exploredParts.add(partKey);
+                    addScore(5);
+                }
+
+                unlockBadge('first_click');
+            } else if (gameState.anatomyMode === 'quiz') {
+                // Se o Quiz já terminou, não processa mais cliques
+                if (!gameState.quizRemainingParts || gameState.quizRemainingParts.length === 0) return;
+
+                if (partKey === gameState.anatomyTargetPart) {
+                    showToast("Correto!", "success");
+                    addScore(15);
+                    triggerConfetti();
+
+                    // Remove a parte acertada da lista para não repetir nem dar pontos infinitos
+                    gameState.quizRemainingParts = gameState.quizRemainingParts.filter(p => p !== partKey);
+
+                    setTimeout(startAnatomyQuiz, 1200);
+                } else {
+                    showToast("Tente novamente!", "warning");
+                }
+            }
+        }
+
+        // --- QUIZ LOGIC (VERSÃO XL) ---
+function renderQuizQuestion() {
+    gameState.quizAnswered = false;
+    const q = QUIZ_QUESTIONS[gameState.quizIndex];
+
+    document.getElementById('quiz-category').innerText = q.category;
+    document.getElementById('quiz-current').innerText = gameState.quizIndex + 1;
+    document.getElementById('quiz-total').innerText = QUIZ_QUESTIONS.length;
+    document.getElementById('quiz-question').innerText = q.question;
+
+    document.getElementById('quiz-progress').style.width = `${((gameState.quizIndex) / QUIZ_QUESTIONS.length) * 100}%`;
+    
+    const feedbackBox = document.getElementById('quiz-feedback');
+    if (feedbackBox) feedbackBox.className = "hidden p-4 rounded-2xl text-sm leading-relaxed border border-slate-800 bg-slate-900 shadow-md";
+    
+    document.getElementById('btn-next-question').classList.add('hidden');
+
+    const optionsContainer = document.getElementById('quiz-options');
+    optionsContainer.innerHTML = '';
+
+    q.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        // Aumentado padding (p-4 sm:p-5), tamanho do texto (text-sm sm:text-base) e bordas arredondadas (rounded-2xl)
+        btn.className = "w-full text-left p-4 sm:p-5 rounded-2xl border border-slate-700/80 bg-slate-800/90 text-sm sm:text-base font-bold text-slate-100 touch-active flex items-center justify-between transition-all active:scale-[0.98]";
+        btn.innerHTML = `
+            <span class="pr-2 leading-snug">${optText}</span>
+            <span class="w-8 h-8 rounded-xl bg-slate-700 text-slate-200 font-black text-xs flex items-center justify-center border border-slate-600 shrink-0 ml-2">
+                ${String.fromCharCode(65 + idx)}
+            </span>
+        `;
+        btn.onclick = () => handleQuizAnswer(idx, btn);
+        optionsContainer.appendChild(btn);
+    });
+}
+
+        function handleQuizAnswer(selectedIndex, btnElement) {
+            if (gameState.quizAnswered) return;
+            gameState.quizAnswered = true;
+
+            const q = QUIZ_QUESTIONS[gameState.quizIndex];
+            const feedbackBox = document.getElementById('quiz-feedback');
+
+            if (selectedIndex === q.correct) {
+                btnElement.className = "w-full text-left p-2.5 rounded-xl border-2 border-botanic-500 bg-botanic-950 text-xs font-bold text-botanic-200 flex items-center justify-between";
+                feedbackBox.className = "p-3 rounded-xl text-xs leading-relaxed bg-botanic-950 border border-botanic-800 text-botanic-200 block";
+                feedbackBox.innerHTML = `<b>Excelente!</b> ${q.explanation}`;
+                addScore(15);
+                triggerConfetti();
+            } else {
+                btnElement.className = "w-full text-left p-2.5 rounded-xl border-2 border-red-500 bg-red-950 text-xs font-bold text-red-200 flex items-center justify-between";
+                feedbackBox.className = "p-3 rounded-xl text-xs leading-relaxed bg-red-950 border border-red-800 text-red-200 block";
+                feedbackBox.innerHTML = `<b>Incorreto.</b> ${q.explanation}`;
+            }
+
+            document.getElementById('btn-next-question').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            if (gameState.quizIndex < QUIZ_QUESTIONS.length - 1) {
+                gameState.quizIndex++;
+                renderQuizQuestion();
+            } else {
+                showToast("Quiz Concluído com Sucesso!", "success");
+                unlockBadge('quiz_master');
+                triggerConfetti();
+            }
+        }
+
+        // --- CULTIVO SIMULATOR ---
+        function switchPlantType(type) {
+            gameState.carePlantType = type;
+            const btnEpi = document.getElementById('btn-epiphyte');
+            const btnTer = document.getElementById('btn-terrestrial');
+            const name = document.getElementById('plant-species-name');
+
+            if (type === 'epiphyte') {
+                btnEpi.className = "p-2.5 rounded-xl border-2 border-orchid-600 bg-orchid-950/60 text-white text-[11px] font-bold touch-active text-center";
+                btnTer.className = "p-2.5 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-300 text-[11px] font-bold touch-active text-center";
+                name.innerText = "Phalaenopsis / Cattleya (Epífita)";
+            } else {
+                btnTer.className = "p-2.5 rounded-xl border-2 border-botanic-600 bg-botanic-950/60 text-white text-[11px] font-bold touch-active text-center";
+                btnEpi.className = "p-2.5 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-300 text-[11px] font-bold touch-active text-center";
+                name.innerText = "Cymbidium / Sobralia (Terrestre)";
+            }
+            updateCareSimulation();
+        }
+
+        function setCareSubstrate(val) {
+            gameState.careSubstrate = val;
+            updateCareSimulation();
+        }
+
+        function updateCareSimulation() {
+            gameState.careLight = parseInt(document.getElementById('light-range').value);
+            gameState.careWater = parseInt(document.getElementById('water-range').value);
+
+            let health = 100;
+            if (gameState.carePlantType === 'epiphyte') {
+                if (gameState.careSubstrate === 'dirt') health -= 50;
+                if (gameState.careWater === 3) health -= 30;
+            } else {
+                if (gameState.careSubstrate === 'gravel') health -= 40;
+            }
+
+            health = Math.max(10, Math.min(100, health));
+            document.getElementById('bar-health').style.width = `${health}%`;
+            document.getElementById('bar-health-val').innerText = `${health}%`;
+        }
+
+        function checkPlantCare() {
+            if (gameState.carePlantType === 'epiphyte' && gameState.careSubstrate === 'bark' && gameState.careLight === 2) {
+                showToast("Cultivo Perfeito! Raízes saudáveis!", "success");
+                addScore(20);
+                unlockBadge('care_master');
+                triggerConfetti();
+            } else {
+                showToast("Ajuste o substrato e a luz para a espécie!", "warning");
+            }
+        }
+
+        // --- RENDERIZADOR DE REFERÊNCIAS ACADÊMICAS (NOVO DESIGN) ---
+        function renderReferences() {
+            const container = document.getElementById('references-cards-container');
+            container.innerHTML = '';
+
+            ACADEMIC_REFERENCES.forEach(ref => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-950/90 rounded-2xl p-4 border border-slate-800/90 hover:border-botanic-600/70 transition-all shadow-md space-y-2 relative overflow-hidden group";
+                
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="space-y-1">
+                            <span class="text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${ref.tagColor}">
+                                ${ref.type}
+                            </span>
+                            <h4 class="font-bold text-slate-100 text-xs sm:text-sm mt-1 leading-snug group-hover:text-botanic-300 transition-colors">
+                                ${ref.title}
+                            </h4>
+                        </div>
+                        <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                            <i data-lucide="book-marked" class="w-3.5 h-3.5 text-botanic-400"></i>
+                        </div>
+                    </div>
+
+                    <p class="text-[11px] font-semibold text-gold-400 flex items-center gap-1">
+                        <i data-lucide="user" class="w-3 h-3 text-gold-400"></i> ${ref.authors}
+                    </p>
+
+                    <p class="text-[11px] text-slate-300 leading-relaxed border-t border-slate-800/80 pt-2">
+                        ${ref.summary}
+                    </p>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function unlockBadge(badgeId) {
+            if (!gameState.unlockedBadges.includes(badgeId)) {
+                gameState.unlockedBadges.push(badgeId);
+                renderBadges();
+                showToast("Novo Troféu Conquistado!", "success");
+            }
+        }
+
+        function addScore(pts) {
+            gameState.score += pts;
+            document.getElementById('user-score').innerText = gameState.score;
+        }
+
+        function resetGameProgress() {
+            gameState.score = 0;
+            gameState.unlockedBadges = [];
+            document.getElementById('user-score').innerText = '0';
+            renderBadges();
+            showToast("Progresso reiniciado!", "info");
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
+        }
+
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            let bg = "bg-slate-800 border-slate-700 text-slate-100";
+            if (type === 'success') bg = "bg-botanic-900 border-botanic-700 text-botanic-200";
+            if (type === 'warning') bg = "bg-amber-950 border-amber-800 text-amber-200";
+            if (type === 'info') bg = "bg-orchid-950 border-orchid-800 text-orchid-200";
+
+            toast.className = `absolute top-14 left-1/2 -translate-x-1/2 z-50 p-3 rounded-xl border text-center shadow-2xl text-xs font-bold transition-all duration-300 transform opacity-100 translate-y-0 w-11/12 max-w-xs ${bg}`;
+            toast.innerText = msg;
+
+            setTimeout(() => {
+                toast.className = "absolute top-14 left-1/2 -translate-x-1/2 z-50 p-3 rounded-xl border text-center shadow-2xl text-xs font-bold transition-all duration-300 transform opacity-0 -translate-y-4 w-11/12 max-w-xs pointer-events-none";
+            }, 5000);
+        }
+
+        // Inicialização
+        window.onload = function() {
+            lucide.createIcons();
+            renderQuizQuestion();
+            updateFlashcardUI();
+            renderReferences();
+            renderBadges();
+            switchTab('start'); // Inicia na Tela Splash
+        };
+    // Função para Alternar Tela Cheia (Liga / Desliga)
+function toggleFullScreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) { /* Safari / iOS */
+            docEl.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari / iOS */
+            document.webkitExitFullscreen();
+        }
+    }
+}
+// --- LÓGICA DO SIMULADOR DE CULTIVO ---
+const especiesOrquideas = {
+    phalaenopsis: {
+        nome: "Phalaenopsis",
+        dificuldade: "Fácil",
+        difClasse: "bg-emerald-950 text-emerald-400 border-emerald-800/50",
+        ideal: { 
+            regaMin: 40, regaMax: 60,
+            subMin: 40, subMax: 70,
+            luzMin: 35, luzMax: 55
+        },
+        dica: "A Phalaenopsis prefere umidade moderada (40-60%) e luz filtrada suave (35-55%)."
+    },
+    cattleya: {
+        nome: "Cattleya",
+        dificuldade: "Intermediário",
+        difClasse: "bg-amber-950 text-amber-400 border-amber-800/50",
+        ideal: { 
+            regaMin: 30, regaMax: 50,
+            subMin: 70, subMax: 95,
+            luzMin: 65, luzMax: 85
+        },
+        dica: "A Cattleya precisa de substrato bem drenado (70-95%) e luminosidade alta (65-85%)."
+    },
+    dendrobium: {
+        nome: "Dendrobium",
+        dificuldade: "Avançado",
+        difClasse: "bg-rose-950 text-rose-400 border-rose-800/50",
+        ideal: { 
+            regaMin: 15, regaMax: 35,
+            subMin: 75, subMax: 100,
+            luzMin: 75, luzMax: 95
+        },
+        dica: "O Dendrobium requer pouca rega (15-35%) e muita iluminação direta (75-95%)."
+    }
+};
+
+let cultivoEstado = {
+    especieAtual: 'phalaenopsis',
+    saude: 100,
+    diasCultivo: 0
+};
+
+// Trava de pontuação por espécie
+let pontuacaoColetadaEspecie = {
+    phalaenopsis: false,
+    cattleya: false,
+    dendrobium: false
+};
+
+// Alterar a espécie selecionada e resetar os sliders para posição desajustada (20%)
+function selecionarEspecie(especieKey) {
+    cultivoEstado.especieAtual = especieKey;
+    cultivoEstado.diasCultivo = 0;
+
+    const slRega = document.getElementById('slider-rega');
+    const slSub = document.getElementById('slider-substrato');
+    const slLuz = document.getElementById('slider-luz');
+
+    if (slRega) slRega.value = 20;
+    if (slSub) slSub.value = 20;
+    if (slLuz) slLuz.value = 20;
+
+    document.querySelectorAll('.btn-especie').forEach(btn => {
+        btn.className = "btn-especie p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 text-xs font-semibold flex flex-col items-center gap-1 transition-all";
+    });
+
+    const btnAtivo = document.getElementById(`btn-${especieKey}`);
+    if (btnAtivo) {
+        btnAtivo.className = "btn-especie p-2 rounded-xl border border-orchid-500/80 bg-orchid-950/40 text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-all";
+    }
+
+    const espData = especiesOrquideas[especieKey];
+    const diffBadge = document.getElementById('cultivo-dificuldade');
+    if (diffBadge) {
+        diffBadge.textContent = espData.dificuldade;
+        diffBadge.className = `text-[10px] px-2 py-0.5 rounded-full border ${espData.difClasse}`;
+    }
+
+    atualizarSimuladorCultivo();
+}
+
+// Atualizar simulador com cálculo de saúde e animações dinâmicas na planta
+function atualizarSimuladorCultivo() {
+    const rega = parseInt(document.getElementById('slider-rega')?.value || 0);
+    const substrato = parseInt(document.getElementById('slider-substrato')?.value || 0);
+    const luz = parseInt(document.getElementById('slider-luz')?.value || 0);
+
+    if (document.getElementById('val-rega')) document.getElementById('val-rega').textContent = `${rega}%`;
+    if (document.getElementById('val-substrato')) document.getElementById('val-substrato').textContent = `${substrato}%`;
+    if (document.getElementById('val-luz')) document.getElementById('val-luz').textContent = `${luz}%`;
+
+    const esp = especiesOrquideas[cultivoEstado.especieAtual];
+    let penalidadeTotal = 0;
+
+    if (rega < esp.ideal.regaMin) penalidadeTotal += (esp.ideal.regaMin - rega) * 1.5;
+    else if (rega > esp.ideal.regaMax) penalidadeTotal += (rega - esp.ideal.regaMax) * 1.5;
+
+    if (substrato < esp.ideal.subMin) penalidadeTotal += (esp.ideal.subMin - substrato) * 1.2;
+    else if (substrato > esp.ideal.subMax) penalidadeTotal += (substrato - esp.ideal.subMax) * 1.2;
+
+    if (luz < esp.ideal.luzMin) penalidadeTotal += (esp.ideal.luzMin - luz) * 1.5;
+    else if (luz > esp.ideal.luzMax) penalidadeTotal += (luz - esp.ideal.luzMax) * 1.5;
+
+    let saudeCalculada = Math.max(0, Math.min(100, Math.round(100 - penalidadeTotal)));
+
+    if (rega === 0 || luz === 0) {
+        saudeCalculada = 0;
+    }
+
+    cultivoEstado.saude = saudeCalculada;
+
+    // Atualizar Barra e Texto de Saúde
+    const barra = document.getElementById('cultivo-saude-barra');
+    const txtSaude = document.getElementById('cultivo-saude-texto');
+    const txtEstagio = document.getElementById('cultivo-estagio-texto');
+    const txtConselho = document.getElementById('cultivo-conselho-texto');
+
+    if (txtSaude) txtSaude.textContent = `${saudeCalculada}%`;
+    if (barra) {
+        barra.style.width = `${saudeCalculada}%`;
+        if (saudeCalculada >= 80) {
+            barra.className = "h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300";
+        } else if (saudeCalculada >= 40) {
+            barra.className = "h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-300";
+        } else {
+            barra.className = "h-full bg-gradient-to-r from-rose-600 to-red-500 rounded-full transition-all duration-300";
+        }
+    }
+
+    // --- PARTE 3: RESPOSTA VISUAL E ANIMAÇÕES NA PLANTA (SEGURA) ---
+    const iconoPlanta = document.querySelector('#sec-care [data-lucide="flower-2"]')?.parentElement;
+
+    if (txtConselho) {
+        if (saudeCalculada >= 80) {
+            txtConselho.textContent = `✨ CONDIÇÕES EXCELENTES! ${esp.dica}`;
+            if (txtEstagio) txtEstagio.textContent = "🌸 ESTADO: FLORIDO (Saudável)";
+            
+            // Efeito visual na bola: Verde neon vibrante com brilho e escala
+            if (iconoPlanta) {
+                iconoPlanta.style.borderColor = "#34d399";
+                iconoPlanta.style.backgroundColor = "rgba(6, 78, 59, 0.6)";
+                iconoPlanta.style.boxShadow = "0 0 30px rgba(52, 211, 153, 0.6)";
+                iconoPlanta.style.transform = "scale(1.1)";
+            }
+        } else if (saudeCalculada >= 40) {
+            txtConselho.textContent = `⚠️ Ajuste fino necessário: Alinhe os valores com as necessidades da espécie. ${esp.dica}`;
+            if (txtEstagio) txtEstagio.textContent = "🌿 ESTADO: NORMAL (Estresse Moderado)";
+
+            // Efeito visual na bola: Âmbar/Amarelo suave
+            if (iconoPlanta) {
+                iconoPlanta.style.borderColor = "#fbbf24";
+                iconoPlanta.style.backgroundColor = "rgba(15, 23, 42, 0.9)";
+                iconoPlanta.style.boxShadow = "0 0 15px rgba(251, 191, 36, 0.2)";
+                iconoPlanta.style.transform = "scale(1.0)";
+            }
+        } else {
+            txtConselho.textContent = `💀 Perigo Crítico! A planta está morrendo por falta de condições básicas. ${esp.dica}`;
+            if (txtEstagio) txtEstagio.textContent = "🥀 ESTADO: MORTO / CRÍTICO";
+
+            // Efeito visual na bola: Vermelho alerta e encolhimento
+            if (iconoPlanta) {
+                iconoPlanta.style.borderColor = "#e11d48";
+                iconoPlanta.style.backgroundColor = "rgba(76, 5, 25, 0.4)";
+                iconoPlanta.style.boxShadow = "0 0 20px rgba(225, 29, 72, 0.4)";
+                iconoPlanta.style.transform = "scale(0.9)";
+            }
+        }
+    }
+}
+
+// Avançar dias com animações e prêmio de floração
+function avancarDiasCultivo() {
+    atualizarSimuladorCultivo();
+
+    cultivoEstado.diasCultivo += 7;
+    const especieAtual = cultivoEstado.especieAtual;
+    const saudeAtual = cultivoEstado.saude;
+
+    // Estresse Crítico / Definhando (< 40%)
+    if (saudeAtual < 40) {
+        pontuacaoColetadaEspecie[especieAtual] = false;
+        
+        if (typeof showToast === 'function') {
+            showToast(`Atenção: 7 dias se passaram em condições inadequadas (${saudeAtual}% de Saúde)! A planta está definhando.`, 'warning');
+        }
+        return;
+    }
+
+    // Floração e Conquista de Pontos (>= 80%)
+    if (saudeAtual >= 80) {
+        if (!pontuacaoColetadaEspecie[especieAtual]) {
+            pontuacaoColetadaEspecie[especieAtual] = true;
+
+            if (typeof addPoints === 'function') {
+                addPoints(15);
+            } else {
+                if (typeof userScore !== 'undefined') userScore += 15;
+                else if (typeof score !== 'undefined') score += 15;
+                
+                const scoreEl = document.getElementById('user-score');
+                if (scoreEl) {
+                    const atual = parseInt(scoreEl.textContent) || 0;
+                    scoreEl.textContent = atual + 15;
+                }
+            }
+
+            // Animação de celebração com confetis e toast especial
+            if (typeof triggerConfetti === 'function') {
+                triggerConfetti();
+            }
+            if (typeof showToast === 'function') {
+                showToast(`🌸 +15 PTS! Parabéns, a sua ${especiesOrquideas[especieAtual].nome} floresceu!`, 'success');
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(`7 dias se passaram! A ${especiesOrquideas[especieAtual].nome} continua radiante! (Pontos desta espécie já coletados).`, 'info');
+            }
+        }
+    } else {
+        // Estresse moderado (40% a 79%)
+        if (typeof showToast === 'function') {
+            showToast(`7 dias se passaram em estresse (${saudeAtual}% de Saúde). Ajuste os sliders para florir!`, 'warning');
+        }
+    }
+}
+
+// Inicialização automática do simulador
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof atualizarSimuladorCultivo === 'function') {
+        atualizarSimuladorCultivo();
+    }
+});
+
+atualizarSimuladorCultivo();
+    </script>
+   
+</body>
+</html>

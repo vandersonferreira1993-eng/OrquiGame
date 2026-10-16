@@ -1,0 +1,16 @@
+{
+  "short_name": "OrquiGame",
+  "name": "OrquiGame - O Jogo Interativo das Orquídeas",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f33a.png",
+      "type": "image/png",
+      "sizes": "72x72"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "display": "standalone",
+  "orientation": "portrait"
+}
